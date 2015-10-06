@@ -3,7 +3,7 @@ var request = require('request');
 var cheerio = require('cheerio');
 var Firebase = require("firebase");
 
-var week = 3;
+var week = 15;
 var last_day = 3;
 var url = "http://www.cbssports.com/collegefootball/scoreboard/FBS/2015/week";
 var myFirebaseRef = new Firebase("https://spreadem.firebaseio.com/");
@@ -22,17 +22,19 @@ function whatDayIsIt () {
 function performScrape() {
 	console.log("running scrape");
 	
-	if (whatDayIsIt() === 3 && last_day !== 3) {
-		console.log("its wednesday, time for a new week!");
-		last_day = 3;
-		week++;
-	}
+//	if (whatDayIsIt() === 3 && last_day !== 3) {
+//		console.log("its wednesday, time for a new week!");
+//		last_day = 3;
+//		week++;
+//	}
 	
-	loadPreEventData(week);
+	for (week = 6; week < 16; week++) {
+		loadPreEventData(week);
 
-	//loadLiveEventData(week);
+		loadLiveEventData(week);
 
-	loadPostEventData(week);
+		loadPostEventData(week);
+	}
 	
 }
 
@@ -44,27 +46,27 @@ function loadPreEventData (week) {
 			//var pre_html = "<table class='lineScore preEvent'><tbody><tr class='gameInfo'><td class='gameStatus'>Thurs.  Oct. 1 - 7:30 pm ET (ESPN)</td><td class='gameOdds'>Line</td></tr><tr class='teamInfo awayTeam NCAAFMIAMI '><td class='teamName'><a href='/collegefootball/teams/page/MIAMI'><img src='/images/collegefootball/logos/25x25/MIAMI.png' width='25' height='25' border='0' class='teamLogo'></a><div class='teamLocation'><a href='/collegefootball/teams/page/MIAMI'>Miami (Fla.)</a><div class='teamRecord'>(3-0)</div></div></td><td class='gameOdds'>68.0 O/U</td></tr><tr class='teamInfo homeTeam NCAAFCINCY '><td class='teamName'><a href='/collegefootball/teams/page/CINCY'><img src='/images/collegefootball/logos/25x25/CINCY.png' width='25' height='25' border='0' class='teamLogo'></a><div class='teamLocation'><a href='/collegefootball/teams/page/CINCY'>Cincinnati</a><div class='teamRecord'>(2-2)</div></div></td><td class='gameOdds'>+6.5</td></tr></tbody></table><table class='lineScore preEvent'><tbody><tr class='gameInfo'><td class='gameStatus'>Fri.  Oct. 2 - 7:30 pm ET (ESPN)</td><td class='gameOdds'>Line</td></tr><tr class='teamInfo awayTeam NCAAFMIAMI '><td class='teamName'><a href='/collegefootball/teams/page/MIAMI'><img src='/images/collegefootball/logos/25x25/MIAMI.png' width='25' height='25' border='0' class='teamLogo'></a><div class='teamLocation'><a href='/collegefootball/teams/page/MIAMI'>Tennessee</a><div class='teamRecord'>(3-0)</div></div></td><td class='gameOdds'>68.0 O/U</td></tr><tr class='teamInfo homeTeam NCAAFCINCY '><td class='teamName'><a href='/collegefootball/teams/page/CINCY'><img src='/images/collegefootball/logos/25x25/CINCY.png' width='25' height='25' border='0' class='teamLogo'></a><div class='teamLocation'><a href='/collegefootball/teams/page/CINCY'>Florida</a><div class='teamRecord'>(2-2)</div></div></td><td class='gameOdds'>+6.5</td></tr></tbody></table>";	
 			var $ = cheerio.load(body);
 	
-			var weekRef = myFirebaseRef.child("weeks/"+week);
 			var i = 0;
 			$('table.lineScore.preEvent').each(function(){
-				var game_date = $(this).find('tr.gameInfo td .gameDate').text();
+				var game_date = $(this).find('tr.gameInfo td').text();
 				var away_team = $(this).find('tr.teamInfo.awayTeam div.teamLocation a').text();
 				var home_team = $(this).find('tr.teamInfo.homeTeam div.teamLocation a').text();
-				var odds = parseFloat($(this).find('tr.teamInfo.homeTeam td.gameOdds').text()) || 0;
+				var odds = parseFloat($(this).find('tr.teamInfo.homeTeam td.gameOdds').text()) || '-';
 				
-				if ( i == 0 ) {
-					// save first date
-					weekRef.update({"firstDate" : game_date});
+				//convert date to useable form
+				var d;
+				if (game_date == 'TBALine') {
+					d = 'TBA';
+				} else {
+					var part = game_date.replace(/\./g, '').split(" ");
+					var longDate = part[0] + " " + part[2] + " " + part[3] + " " + '2015' + " " + part[5].concat(':00');
+					d = new Date(longDate);
 				}
-				i++;
-
-				//save last date found
-				weekRef.update({"firstDate" : game_date});
 				
 				//save the game info using the home team as the key
 				var gameRef = myFirebaseRef.child("games/week"+week+"/"+escapeFirebaseKey(home_team));
 				gameRef.update({
-					"date" 		: game_date,
+					"date" 		: d,
 					"away" 		: away_team,
 					"home" 		: home_team,
 					"odds" 		: odds,
