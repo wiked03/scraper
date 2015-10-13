@@ -28,12 +28,16 @@ function performScrape() {
 //		week++;
 //	}
 	
-	for (week = 6; week < 16; week++) {
+	for (week = 6; week < 7; week++) {
 		loadPreEventData(week);
 
 		loadLiveEventData(week);
 
 		loadPostEventData(week);
+		
+		processGameResults(week);
+		
+		updateUserScores(week);
 	}
 	
 }
@@ -116,6 +120,7 @@ function loadPostEventData (week) {
 			$('table.lineScore.postEvent').each(function(){
 				var away_score = $(this).find('tr.teamInfo.awayTeam td.finalScore').text();
 				var home_team = $(this).find('tr.teamInfo.homeTeam div.teamLocation a').text();
+				var away_team = $(this).find('tr.teamInfo.awayTeam div.teamLocation a').text();
 				var home_score = $(this).find('tr.teamInfo.homeTeam td.finalScore').text();
 
 				var gameRef = myFirebaseRef.child("games/week"+week+"/"+escapeFirebaseKey(home_team));
@@ -132,6 +137,49 @@ function loadPostEventData (week) {
 			console.log("loadPostEventData: We’ve encountered an error: " + error);
 		}
 	});
+}
+
+function processGameResults (week) {
+	
+	var gamesRef = myFirebaseRef.child("games/week"+week);
+	gamesRef.once("value", function(data) {
+		data.forEach(function (gameData) {
+			var game = gameData.val();
+			if (game.finished) {
+				var gameRef = myFirebaseRef.child("games/week"+week+"/"+escapeFirebaseKey(game.home));
+				var odds = parseFloat(game.odds) || 0;
+				if (parseInt(game.homeScore) + odds > parseInt(game.awayScore)) {
+					gameRef.update({
+						"awayWin"	: false,
+						"homeWin"	: true
+					})
+				} else if (parseInt(game.homeScore) + odds < parseInt(game.awayScore)) {
+					gameRef.update({
+						"awayWin"	: true,
+						"homeWin"	: false
+					})
+				} else {
+					gameRef.update({
+						"awayWin"	: false,
+						"homeWin"	: false
+					})
+				}
+				
+			}
+		})
+	});
+}
+
+function updateUserScores (week) {
+	
+	var usersRef = myFirebaseRef.child("users");
+	var users = [];
+	usersRef.once("value", function(data) {
+		data.forEach(function (userData) {
+			users.push(userData.val());
+		})
+	});
+	console.log(users);
 }
 
 
