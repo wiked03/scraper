@@ -2,7 +2,7 @@ var express = require('express');
 var request = require('request');
 var cheerio = require('cheerio');
 var Firebase = require("firebase");
-var Firebase = require("angularfire");
+//var Firebase = require("angularfire");
 
 var week = 15;
 var last_day = 3;
@@ -177,12 +177,14 @@ function updateUserScores (week) {
 	var users = [];
 	usersRef.once("value", function(data) {
 		data.forEach(function (userData) {
-			var picks = userData.val()['week'+week].toArray();
-			if (picks) {
-				var key = userData.key();
-				var gameRef = myFirebaseRef.child("games/week"+week+"/"+escapeFirebaseKey(userData));
+			var picks = userData.val()['week'+week];
+			for(pick in picks) {
+				if (!picks.hasOwnProperty(pick)) {
+					continue;
+				}
+				console.log(pick);
+				var gameRef = myFirebaseRef.child("games/week"+week+"/"+escapeFirebaseKey(pick));
 			}
-
 		})
 	});
 }
