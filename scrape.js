@@ -29,7 +29,7 @@ function performScrape() {
 //		week++;
 //	}
 
-	for (week = 6; week < 7; week++) {
+	for (week = 7; week < 16; week++) {
 		loadPreEventData(week);
 
 		loadLiveEventData(week);
