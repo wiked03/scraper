@@ -4,14 +4,14 @@ var cheerio = require('cheerio');
 var Firebase = require("firebase");
 //var Firebase = require("angularfire");
 
-var week = 15;
+var week = 9;
 var last_day = 3;
 var url = "http://www.cbssports.com/collegefootball/scoreboard/FBS/2015/week";
 var myFirebaseRef = new Firebase("https://spreadem.firebaseio.com/");
 
 
 performScrape();
-setInterval(performScrape, 60000);  // 1 min
+//setInterval(performScrape, 60000);  // 1 min
 
 
 
@@ -29,7 +29,7 @@ function performScrape() {
 //		week++;
 //	}
 
-	for (week = 7; week < 16; week++) {
+	//for (week = 8; week < 9; week++) {
 		loadPreEventData(week);
 
 		loadLiveEventData(week);
@@ -39,7 +39,9 @@ function performScrape() {
 		processGameResults(week);
 
 		updateUserScores(week);
-	}
+	//}
+	
+	//process.exit();
 
 }
 
@@ -177,13 +179,40 @@ function updateUserScores (week) {
 	var users = [];
 	usersRef.once("value", function(data) {
 		data.forEach(function (userData) {
+			var key = userData.key();
+			var score = userData.val().score;
 			var picks = userData.val()['week'+week];
+			var userDtlRef = myFirebaseRef.child("users/"+key);
 			for(pick in picks) {
 				if (!picks.hasOwnProperty(pick)) {
 					continue;
 				}
-				console.log(pick);
-				var gameRef = myFirebaseRef.child("games/week"+week+"/"+escapeFirebaseKey(pick));
+				var pickRef = myFirebaseRef.child("users/"+key+"/week"+week+"/"+escapeFirebaseKey(pick));
+				pickRef.once("value", function(pickData) {
+					var pickDtl = pickData.val();
+					console.log(pickDtl.home);
+					var gameRef = myFirebaseRef.child("games/week"+week+"/"+escapeFirebaseKey(pick));
+					gameRef.once("value", function(gameData) {
+						var game = gameData.val();
+						console.log(game);
+						if (game.finished) {
+							if (game.homeWin == pickDtl.home) {
+								score += 2;
+								userDtlRef.update({
+									"score"	: score
+								})						
+							} else if (game.homeWin == game.awayWin) {
+								score += 1;
+								userDtlRef.update({
+									"score"	: score
+								})
+							} 
+						}
+					})
+				})
+				
+				
+
 			}
 		})
 	});
